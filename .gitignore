@@ -1,0 +1,24 @@
+# Root-level .gitignore for Monorepo
+
+# Global ignores
+server/node_modules/
+svelte-google-oauth/node_modules/
+
+.DS_Store
+.env
+.idea/
+.vscode/
+*.log
+yarn.lock
+yarn-error.log
+npm-debug.log*
+
+# Svelte-specific ignores
+# Navigate to your Svelte app directory and add these
+svelte-google-oauth/public/build/
+
+# Nest.js-specific ignores
+# Navigate to your Nest.js server directory and add these
+server/dist/
+server/.env
+server/coverage/
