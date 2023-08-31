@@ -1,69 +1,93 @@
 <script>
-  import GoogleSignIn from "./GoogleSignIn.svelte";
+  import axios from "axios";
 
-  let googleUser = null;
+  // OAuth settings
+  const clientID =
+    "242521280191-57jtv00ll8cdejh127r4a95f32gm81dk.apps.googleusercontent.com";
+  const redirectURI = "http://localhost:8080";
+  const scope = "https://www.googleapis.com/auth/drive.metadata.readonly";
+  const ux_mode = "popup";
+  const responseType = "token";
+
+  // Reactive variable to store Excel files
   let excelFiles = [];
 
-  function setGoogleUser(user) {
-    googleUser = user;
+  function initiateOAuth() {
+    // Build OAuth URL
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientID}&redirect_uri=${redirectURI}&response_type=${responseType}&scope=${scope}&ux_mode=${ux_mode}`;
+
+    // Redirect to Google's OAuth Server
+    window.location.href = authUrl;
   }
 
-  function logoutAndRevoke() {
-    // Assuming you're using Google's new One Tap system:
-    google.accounts.id.revoke("sergimartinezrodriguez@gmail.com", (done) => {
-      console.log("consent revoked");
-    });
+  function fetchGoogleDriveFiles(token) {
+    console.log("que lo que", token);
+
+    // Perform Axios GET request to NestJS server
+    axios
+      .get("http://localhost:3000/api/excel-files", {
+        params: {
+          token: token,
+        },
+      })
+      .then((response) => {
+        // Update the reactive variable excelFiles
+        excelFiles = response.data;
+
+        // Log the response data
+        console.log("Received response:", response.data);
+      })
+      .catch((error) => {
+        // Handle any errors
+        console.error("Error fetching Excel files:", error);
+      });
   }
 
-  async function fetchExcelFiles(token) {
-    const response = await fetch(
-      `http://localhost:3000/api/excel-files?token=${token}`
+  // Handle OAuth 2.0 token (equivalent to React's useEffect)
+  if (window.location.hash && window.location.hash.includes("access_token")) {
+    const token = new URLSearchParams(window.location.hash.substr(1)).get(
+      "access_token"
     );
-
-    if (response.ok) {
-      excelFiles = await response.json();
-    } else {
-      console.error("Failed to fetch Excel files");
-      const errorData = await response.json();
-      console.error(errorData);
-    }
+    fetchGoogleDriveFiles(token);
   }
 </script>
 
-<main>
-  <h1>Hello Svelte!</h1>
-  <GoogleSignIn {fetchExcelFiles} {setGoogleUser} />
-  {#if excelFiles.length > 0}
-    <ul>
-      {#each excelFiles as file}
-        <li>{file.name}</li>
-      {/each}
-    </ul>
-  {/if}
+<div>
+  <button class="button" on:click={initiateOAuth}>Sign in with Google</button>
+</div>
 
-  {#if googleUser}
-    <button on:click={logoutAndRevoke}>Logout</button>
-  {/if}
-</main>
+<!-- Display Excel Files -->
+<ul class="file-list">
+  {#each excelFiles as file}
+    <li>{file.name} (ID: {file.id})</li>
+  {/each}
+</ul>
 
+<!-- Styles -->
 <style>
-  main {
+  .button {
+    background-color: #4caf50;
+    border: none;
+    color: white;
+    padding: 15px 32px;
     text-align: center;
-    padding: 1em;
-    max-width: 240px;
-    margin: 0 auto;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
   }
 
-  h1 {
-    color: #ff3e00;
-    text-transform: uppercase;
-    font-size: 4em;
-    font-weight: 100;
+  ul.file-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
   }
 
-  @media (min-width: 640px) {
-    main {
-      max-width: none;
-    }
+  ul.file-list li {
+    border: 1px solid #ccc;
+    margin: 8px 0;
+    padding: 12px;
+    background-color: #f9f9f9;
   }
 </style>
